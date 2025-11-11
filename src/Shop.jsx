@@ -1,6 +1,29 @@
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
+import FruitCard from './components/FruitCard'
+import { products } from './data/products'
 
 export default function Shop() {
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState(new Set())
+  const [sort, setSort] = useState('Newest')
+
+  const filtered = useMemo(() => {
+    let list = products.filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
+    if(category.size){
+      list = list.filter(p => category.has(p.category))
+    }
+    if(sort === 'Price: Low to High') list = list.slice().sort((a,b)=>a.price-b.price)
+    if(sort === 'Top Rated') list = list // placeholder for rating
+    return list
+  }, [query, category, sort])
+
+  const toggleCat = (c) => {
+    const next = new Set(category)
+    next.has(c) ? next.delete(c) : next.add(c)
+    setCategory(next)
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-green-50">
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -13,8 +36,8 @@ export default function Shop() {
                 <div className="font-medium mb-2">Category</div>
                 <div className="space-y-1">
                   {['Fruits','Vegetables','Organic Packs','Juice Essentials'].map((c) => (
-                    <label key={c} className="flex items-center gap-2">
-                      <input type="checkbox" /> <span>{c}</span>
+                    <label key={c} className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={category.has(c)} onChange={()=>toggleCat(c)} /> <span>{c}</span>
                     </label>
                   ))}
                 </div>
@@ -44,10 +67,9 @@ export default function Shop() {
           <div className="flex-1">
             <div className="flex items-center justify-between gap-3">
               <div className="relative flex-1 max-w-md">
-                <input className="h-11 w-full rounded-full border border-gray-200 bg-white px-4 pl-11 text-sm outline-none focus:border-green-400" placeholder="Search fresh produce..." />
-                <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔎</div>
+                <input value={query} onChange={e=>setQuery(e.target.value)} className="h-11 w-full rounded-full border border-gray-200 bg-white px-4 text-sm outline-none focus:border-green-400" placeholder="Search fresh produce..." />
               </div>
-              <select className="h-11 rounded-full border border-gray-200 px-3 text-sm">
+              <select value={sort} onChange={e=>setSort(e.target.value)} className="h-11 rounded-full border border-gray-200 px-3 text-sm">
                 <option>Newest</option>
                 <option>Price: Low to High</option>
                 <option>Top Rated</option>
@@ -55,18 +77,14 @@ export default function Shop() {
             </div>
 
             <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.25, delay: i * 0.03 }} className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-                  <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-green-50 to-yellow-50 flex items-center justify-center text-5xl">{['🍎','🥭','🍌','🍓','🍊','🍍'][i%6]}</div>
-                  <div className="mt-3 font-semibold">Seasonal Produce {i+1}</div>
-                  <div className="text-sm text-gray-500">by Farmer {String.fromCharCode(65 + (i%6))}</div>
-                  <div className="mt-2 font-bold">${(3.5 + (i%5)).toFixed(2)} / kg</div>
-                  <button className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-green-600 px-4 py-2 text-white hover:bg-green-700">Add to cart</button>
+              {filtered.map((p, i) => (
+                <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.25, delay: i * 0.03 }}>
+                  <FruitCard product={p} />
                 </motion.div>
               ))}
             </div>
 
-            <div className="mt-8 text-center text-sm text-gray-500">Scroll to load more...</div>
+            <div className="mt-8 text-center text-sm text-gray-500">{filtered.length} items</div>
           </div>
         </div>
       </section>

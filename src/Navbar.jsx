@@ -1,9 +1,11 @@
 import { Link, NavLink } from 'react-router-dom'
 import { ShoppingCart, Leaf, User, Menu, Search } from 'lucide-react'
 import { useState } from 'react'
+import { useCart } from './context/CartContext'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
+  const { count } = useCart()
 
   const navLink = (to, label) => (
     <NavLink
@@ -48,7 +50,9 @@ export default function Navbar() {
             <Link to="/cart" className="relative inline-flex items-center gap-2 rounded-full bg-green-600 px-4 py-2 text-white shadow hover:bg-green-700">
               <ShoppingCart size={18} />
               <span className="hidden sm:inline">Cart</span>
-              <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-orange-500 px-1 text-xs font-semibold">2</span>
+              {count > 0 && (
+                <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-orange-500 px-1 text-xs font-semibold">{count}</span>
+              )}
             </Link>
             <Link to="/login" className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-50">
               <User size={18} />

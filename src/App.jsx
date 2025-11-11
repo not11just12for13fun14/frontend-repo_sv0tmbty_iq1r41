@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Spline from '@splinetool/react-spline'
 
@@ -7,14 +7,24 @@ const FRUITS = ['🍎','🍊','🍇','🍓','🍌','🍍','🥝','🍑']
 function App() {
   const [clickFruits, setClickFruits] = useState([])
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  const [vh, setVh] = useState(typeof window !== 'undefined' ? window.innerHeight : 800)
   const idRef = useRef(0)
+  const rafRef = useRef(null)
+
+  useEffect(() => {
+    const onResize = () => setVh(window.innerHeight)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const handleMouseMove = (e) => {
-    const { innerWidth: w, innerHeight: h } = window
-    const x = (e.clientY - h / 2) / h // invert for rotateX
-    const y = (e.clientX - w / 2) / w
-    // subtle 3D tilt
-    setTilt({ x: x * -8, y: y * 10 })
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    rafRef.current = requestAnimationFrame(() => {
+      const { innerWidth: w, innerHeight: h } = window
+      const x = (e.clientY - h / 2) / h
+      const y = (e.clientX - w / 2) / w
+      setTilt({ x: x * -10, y: y * 12 })
+    })
   }
 
   const handleClick = (e) => {
@@ -24,7 +34,8 @@ function App() {
     const id = idRef.current++
     const fruit = FRUITS[Math.floor(Math.random() * FRUITS.length)]
     const size = 28 + Math.random() * 22
-    const drift = (Math.random() - 0.5) * 160
+    const drift = (Math.random() - 0.5) * 180
+    const life = 2.6 + Math.random() * 1.2 // seconds
 
     setClickFruits((prev) => [
       ...prev,
@@ -35,14 +46,15 @@ function App() {
         fruit,
         size,
         drift,
-        rotate: (Math.random() - 0.5) * 120,
-        life: 2400 + Math.random() * 1200,
+        rotate: (Math.random() - 0.5) * 140,
+        life,
       },
     ])
-  }
 
-  const removeFruit = (id) => {
-    setClickFruits((prev) => prev.filter((f) => f.id !== id))
+    // schedule removal to trigger AnimatePresence exit
+    setTimeout(() => {
+      setClickFruits((prev) => prev.filter((f) => f.id !== id))
+    }, life * 1000)
   }
 
   const floatingFruits = useMemo(() => {
@@ -57,7 +69,7 @@ function App() {
   }, [])
 
   return (
-    <div className="min-h-screen w-full overflow-hidden bg-black" onMouseMove={handleMouseMove} onClick={handleClick}>
+    <div className="relative min-h-screen w-full overflow-hidden bg-black" onMouseMove={handleMouseMove} onClick={handleClick}>
       {/* 3D background cover */}
       <div className="absolute inset-0">
         <Spline scene="https://prod.spline.design/kqB-rdL4TCJ7pyGb/scene.splinecode" style={{ width: '100%', height: '100%' }} className="pointer-events-none" />
@@ -110,7 +122,7 @@ function App() {
             className="absolute"
             style={{ left: `${f.left}%`, bottom: '-60px', fontSize: f.size }}
             initial={{ y: 0, opacity: 0 }}
-            animate={{ y: -window.innerHeight - 200, opacity: [0, 1, 1, 0] }}
+            animate={{ y: -vh - 200, opacity: [0, 1, 1, 0] }}
             transition={{ delay: f.delay, duration: f.duration, repeat: Infinity, ease: 'easeInOut' }}
           >
             <span className="drop-shadow">{f.fruit}</span>
@@ -123,13 +135,12 @@ function App() {
         {clickFruits.map((f) => (
           <motion.div
             key={f.id}
-            className="absolute z-20 select-none"
+            className="absolute z-20 select-none will-change-transform"
             style={{ left: f.x, top: f.y, fontSize: f.size }}
             initial={{ x: 0, y: 0, opacity: 0, scale: 0.6, rotate: 0 }}
-            animate={{ x: f.drift, y: -180 - Math.random() * 120, opacity: 1, scale: 1.2, rotate: f.rotate }}
-            exit={{ opacity: 0, scale: 0.4 }}
-            transition={{ type: 'spring', stiffness: 90, damping: 16, duration: f.life / 1000 }}
-            onAnimationComplete={() => removeFruit(f.id)}
+            animate={{ x: f.drift, y: -200 - Math.random() * 140, opacity: 1, scale: 1.15, rotate: f.rotate }}
+            exit={{ opacity: 0, scale: 0.7 }}
+            transition={{ type: 'tween', duration: f.life, ease: [0.22, 1, 0.36, 1] }}
           >
             <span className="drop-shadow-lg">{f.fruit}</span>
           </motion.div>
